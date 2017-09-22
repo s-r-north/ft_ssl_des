@@ -1,4 +1,4 @@
-#include "./libft/libft.h"
+#include "ft_ssl.h"
 
 void	set_struct(t_ssl *ssl)
 {
@@ -31,9 +31,11 @@ void	base_64_encrypt(t_ssl *ssl)
 	while (i < ssl->len)
 	{
 		out[j++] = b64set[in[i] >> 2];
-		out[j++] = b64set[63 & (in[i] << 4 | in[i + 1] >> 4)];
-		out[j++] = in[i + 1] ? b64set[63 & (in[i + 1] << 2 | in[i + 2] >> 6)] : '=';
-		out[j++] = in[i + 2] ? b64set[63 & in[i + 2]] : '=';
+		out[j++] = b64set[077 & (in[i] << 4 | in[i + 1] >> 4)];
+		out[j++] = (in[i + 1] || i + 3 < ssl->len) ?
+				b64set[077 & (in[i + 1] << 2 | in[i + 2] >> 6)] : '=';
+		out[j++] = (in[i + 2] || i + 3 < ssl->len) ?
+				b64set[077 & in[i + 2]] : '=';
 		i += 3;
 	}
 	write(ssl->fdout, out, ssl->len * 4 / 3);
@@ -69,7 +71,6 @@ void	base_64_decrypt(t_ssl *ssl)
 	ft_strdel(&out);
 	if (ssl->fdout > 1)
 		close(ssl->fdout);
-
 }
 
 int		read_func_base64(t_ssl *ssl)

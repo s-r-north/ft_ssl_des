@@ -2,48 +2,50 @@
 
 void	pc2(t_key *key)
 {
-	unsigned long	pc : 56;
+	uint64_t	cd;
 	int i;
 
-	pc = key->pc1c;
-	pc = (pc << 28) | key->pc1d;
+	cd = key->pc1c;
+	cd = (cd << 28) | key->pc1d;
 	i = -1;
 	while (++i < 48)
-		key->k = (key->k << 1) | (1 & (pc >> g_pc2[i]));
+		key->k = (key->k << 1) | (1 & (cd >> g_pc2[i]));
 }
 
 void	permuted_choice(t_ssl *ssl)
 {
-	unsigned int x;
-	unsigned int n;
+	uint32_t x;
+	uint32_t n;
 	int i;
 
 	n = 7;
 	while (n != 36)
 	{
-		ssl->key[0]->pc1c = (ssl->key[0]->pc1c << 1) | ((ssl->pass >> n) & 1);
+		ssl->key[0].pc1c = (ssl->key[0].pc1c << 1) | ((ssl->pass >> n) & 1);
 		n += n > 55 ? -57 : 8;
 	}
 	n = 1;
 	while (n != 4)
 	{
-		ssl->key[0]->pc1d = (ssl->key[0]->pc1d << 1) | ((ssl->pass >> n) & 1);
+		ssl->key[0].pc1d = (ssl->key[0].pc1d << 1) | ((ssl->pass >> n) & 1);
 		n += n > 55 ? -55 : 8;
 	}
 	x = 0b0111111011111100;
 	i = 0;
 	while (++i < 17)
 	{
-		ssl->key[i]->pc1c = (shift(x) & (ssl->key[i - 1]->pc1c >> (28 - shift(x)))) | (ssl->key[i - 1]->pc1c << shift(x));
-		ssl->key[i]->pc1d = (shift(x) & (ssl->key[i - 1]->pc1d >> (28 - shift(x)))) | (ssl->key[i - 1]->pc1d << shift(x));
+		ssl->key[i].pc1c = (SHIFT(x) & (ssl->key[i - 1].pc1c >> (28 - SHIFT(x))))
+				| (ssl->key[i - 1].pc1c << SHIFT(x));
+		ssl->key[i].pc1d = (SHIFT(x) & (ssl->key[i - 1].pc1d >> (28 - SHIFT(x))))
+				| (ssl->key[i - 1].pc1d << SHIFT(x));
 		pc2(&(ssl->key[i]));
 		x >>= 1;
 	}
 }
 
-size_t	key_interpret(char *s)
+uint64_t	key_interpret(char *s)
 {
-	size_t	pass;
+	uint64_t	pass;
 
 	pass = 0;
 	while (*s)
@@ -92,6 +94,7 @@ int		main(int ac, char **av)
 		return (-1);
 	ssl.pass = key_interpret(av[1]);
 	permuted_choice(&ssl);
+	
 }
 
 	// srand(0);

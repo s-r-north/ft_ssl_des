@@ -30,12 +30,12 @@ void	base_64_encrypt(t_ssl *ssl)
 	j = 0;
 	while (i < ssl->len)
 	{
-		out[j++] = b64set[in[i] >> 2];
-		out[j++] = b64set[077 & (in[i] << 4 | in[i + 1] >> 4)];
+		out[j++] = g_b64set[in[i] >> 2];
+		out[j++] = g_b64set[077 & (in[i] << 4 | in[i + 1] >> 4)];
 		out[j++] = (in[i + 1] || i + 3 < ssl->len) ?
-				b64set[077 & (in[i + 1] << 2 | in[i + 2] >> 6)] : '=';
+				g_b64set[077 & (in[i + 1] << 2 | in[i + 2] >> 6)] : '=';
 		out[j++] = (in[i + 2] || i + 3 < ssl->len) ?
-				b64set[077 & in[i + 2]] : '=';
+				g_b64set[077 & in[i + 2]] : '=';
 		i += 3;
 	}
 	write(ssl->fdout, out, ssl->len * 4 / 3);
@@ -58,12 +58,12 @@ void	base_64_decrypt(t_ssl *ssl)
 	j = 0;
 	while (i < ssl->len)
 	{
-		out[j++] = (ft_strchr(b64set, in[i]) - b64set) << 2 |
-				(ft_strchr(b64set, in[i + 1]) - b64set) >> 4;
-		out[j++] = in[i + 2] == '=' ? 0 : ((ft_strchr(b64set, in[i + 1]) - b64set)
-				<< 4) | ((ft_strchr(b64set, in[i + 2]) - b64set) >> 2);
-		out[j++] = in[i + 3] == '=' ? 0 : ((ft_strchr(b64set, in[i + 2]) - b64set)
-				<< 6) | ((ft_strchr(b64set, in[i + 3]) - b64set));
+		out[j++] = (ft_strchr(g_b64set, in[i]) - g_b64set) << 2 |
+				(ft_strchr(g_b64set, in[i + 1]) - g_b64set) >> 4;
+		out[j++] = in[i + 2] == '=' ? 0 : ((ft_strchr(g_b64set, in[i + 1]) -
+				g_b64set) << 4) | ((ft_strchr(g_b64set, in[i + 2]) - g_b64set) >> 2);
+		out[j++] = in[i + 3] == '=' ? 0 : ((ft_strchr(g_b64set, in[i + 2]) -
+				g_b64set) << 6) | ((ft_strchr(g_b64set, in[i + 3]) - g_b64set));
 		i += 4;
 	}
 	write(ssl->fdout, out, ssl->len * 3 / 4);

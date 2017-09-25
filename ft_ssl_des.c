@@ -10,6 +10,8 @@ void	pc2(t_key *key)
 	i = -1;
 	while (++i < 48)
 		key->k = (key->k << 1) | (1 & (cd >> g_pc2[i]));
+	key->pc1c = 0;
+	key->pc1d = 0;
 }
 
 void	permuted_choice(t_ssl *ssl)
@@ -81,7 +83,92 @@ int		read_func_des(t_ssl *ssl)
 		ft_bzero(ssl->in + len, 9 - (len % 8));
 		len += 8 - (len % 8);
 	}
+	ft_bzero(tmp, 4097);
 	return (rd == -1 ? rd : len);
+}
+
+void	des_message(t_ssl *ssl, size_t cur)
+{
+	uint64_t	message;
+	size_t		i;
+
+	i = -1;
+	message = 0;
+	while (++i < 8)
+		message |= ((uint64_t)ssl->in[cur + i] << (8 * (7 - i)));
+	if (ssl->cbc)
+		message ^= ssl->chain;
+	ssl->m = message;
+}
+
+uint32_t	des_feistel(uint32_t r, t_key *key)
+{
+	t_exp		e;
+	uint32_t	out;
+	size_t		i;
+
+	i = -1;
+	while(++i < 48)
+		e.e |= ((1 & r >> g_ebit[i]) << (47 - i));
+	e.e ^= key->k;
+	i = -1;
+	while (++i < 8)
+	{
+		e.col = (0xf & (e.e >> (1 + 6 * i)));
+		e.row = ((1 & (e.e >> (5 + 6 * i))) << 1) | (1 & (e.e >> (6 * i)));
+		e.sbx |= (0xf & g_des_sbox[i][e.row][e.col]) << (4 * (7 - i));
+	}
+	i = -1;
+	while (++i < 32)
+		out |= ((1 & e.sbx >> g_p_out[i])) << (31 - i);
+	return (out);
+}
+
+void	des_encrypt(t_ssl *ssl, char *out)
+{
+	uint32_t	l[17];
+	uint32_t	r[17];
+	uint64_t	rl16;
+	size_t i;
+
+	i = -1;
+	while (++i < 32)
+		l[0] |= ((1 & (ssl->m >> g_ip[i])) << (31 - i));
+	while (++i < 64)
+		r[0] |= ((1 & (ssl->m >> g_ip[i])) << (63 - i));
+	i = 0;
+	while (++i < 17)
+	{
+		l[i] = r[i - 1];
+		r[i] = (l[i - 1]) ^ (des_feistel(r[i - 1], &(ssl->key[i])));
+	}
+	rl16 = ((uint64_t)r[16] << 32) | l[16];
+	i = -1;
+	while (++i < 64)
+		ssl->chain |= ((1 & (rl16 >> g_fp[i])) << (63 - i));
+	i = -1;
+	while (++i < 8)
+		out[i] = 0xff & (ssl->chain >> (8 * (7 - i)));
+}
+
+void	des_encrypt_in(t_ssl *ssl)
+{
+	size_t i;
+	char *out;
+
+	i = 0;
+	out = ft_strnew(ssl->len);
+	ssl->cbc = 0; // put this in init later
+	while (i < ssl->len)
+	{
+		des_message(ssl, i);
+		des_encrypt(ssl, out + i);
+		i += 8;
+	}
+	write(ssl->fdout, out, ssl->len);
+	ft_strdel(&(ssl->in));
+	ft_strdel(&out);
+
 }
 
 int		main(int ac, char **av)
@@ -90,11 +177,15 @@ int		main(int ac, char **av)
 
 	ssl.in = NULL;
 	ssl.fdin = 0;
+	ssl.fdout = 1;
 	if ((ssl.len = read_func_des(&ssl)) == -1)
 		return (-1);
 	ssl.pass = key_interpret(av[1]);
 	permuted_choice(&ssl);
-	
+	if (ssl.decrypt)
+		return (0); // decrypt function here
+	else
+		des_encrypt_in(&ssl);
 }
 
 	// srand(0);

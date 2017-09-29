@@ -117,7 +117,7 @@ void	des_message(t_ssl *ssl, size_t cur)
 	while (++i < 8)
 	{
 		// message <<= 8;
-		message |= (((uint64_t)ssl->in[cur + i] & 0xff) << (8 * i));
+		message |= (((uint64_t)ssl->in[cur + i] & 0xff) << (8 * (7 - i)));
 	}
 	if (ssl->cbc)
 		message ^= ssl->chain;

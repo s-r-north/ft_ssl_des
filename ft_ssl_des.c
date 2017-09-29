@@ -9,7 +9,8 @@ void	pc2(t_key *key)
 	key->k = 0;
 	while (++i < 48)
 	{
-		key->k |= (1 & (key->cd >> g_pc2[i])) << (47 - i);
+		key->k <<= 1;
+		key->k |= (1 & (key->cd >> g_pc2[i]));
 		// printf("%#.6x\t%u  %u\n", key->k, 1 & (key->k >> (47 - i)), 1 & (key->cd >> g_pc2[i]));
 	}
 	key->cd = 0;
@@ -23,9 +24,15 @@ void	permuted_choice(t_ssl *ssl)
 
 	i = -1;
 	while (++i < 28)
-		ssl->key[0].pc1c |= ((1 & (ssl->pass >> g_pc1[i])) << (27 - i));
+	{
+		ssl->key[0].pc1c <<= 1;
+		ssl->key[0].pc1c |= ((1 & (ssl->pass >> g_pc1[i])));
+	}
 	while (++i < 56)
-		ssl->key[0].pc1d |= ((1 & (ssl->pass >> g_pc1[i])) << (55 - i));
+	{
+		ssl->key[0].pc1d <<= 1;
+		ssl->key[0].pc1d |= ((1 & (ssl->pass >> g_pc1[i])));
+	}
 	i = 0;
 	while (++i < 17)
 	{
@@ -88,12 +95,14 @@ int		read_func_des(t_ssl *ssl)
 		ssl->in = (char*)ft_memcpy(ssl->in + len, tmp, rd);
 		len += rd;
 	}
+	ssl->in[--len] = 0;
 	if (len % 8)
 	{
 		ssl->in = (char*)ft_realloc(ssl->in, len + 9 - (len % 8));
 		ft_bzero(ssl->in + len, 9 - (len % 8));
 		len += 8 - (len % 8);
 	}
+	// printf("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n%s\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", ssl->in);
 	ft_bzero(tmp, 4097);
 	return (rd == -1 ? rd : len);
 }
@@ -106,7 +115,10 @@ void	des_message(t_ssl *ssl, size_t cur)
 	i = -1;
 	message = 0;
 	while (++i < 8)
-		message |= ((uint64_t)ssl->in[cur + i] << (8 * (7 - i)));
+	{
+		// message <<= 8;
+		message |= (((uint64_t)ssl->in[cur + i] & 0xff) << (8 * i));
+	}
 	if (ssl->cbc)
 		message ^= ssl->chain;
 	ssl->m = message;
@@ -123,27 +135,39 @@ uint32_t	des_feistel(uint32_t r, t_key *key)
 	i = -1;
 	while(++i < 48)
 	{
-		e.e |= (1 & (r >> g_ebit[i])) << (47 - i);
-		printf("%#.12llx\t%u\t%u\t%u\t%zu\n", e.e, 1 & (e.e >> (47 - i)), 1 & (r >> g_ebit[i]), g_ebit[i], 47 - i);
+		e.e <<= 1;
+		e.e |= (1 & (r >> g_ebit[i]));
+		//printf("%#.12llx\t%u\t%u\t%u\t%zu\n", e.e, 1 & (e.e >> (47 - i)), 1 & (r >> g_ebit[i]), g_ebit[i], 47 - i);
 	}
-	if (e.e != 0b011110100001010101010101011110100001010101010101)
-		printf("exp bad: %#.12llx\t%#.12llx\n", e.e, 0b011110100001010101010101011110100001010101010101);
+	// if (e.e != 0b011110100001010101010101011110100001010101010101)
+	// 	printf("exp bad: %#.12llx\t%#.12llx\n", e.e, 0b011110100001010101010101011110100001010101010101);
 	e.e ^= key->k;
+	// printf("%.12llx, %.12llx\n", e.e, 0b011000010001011110111010100001100110010100100111);
+	// if (e.e != 0b011000010001011110111010100001100110010100100111)
+	// 	printf("xor bad: %#.12llx\t%#.12llx\n", e.e, 0b011000010001011110111010100001100110010100100111);
 	i = -1;
 	while (++i < 8)
 	{
-		e.col = (0xf & (e.e >> (1 + 6 * i)));
-		e.row = ((1 & (e.e >> (5 + 6 * i))) << 1) | (1 & (e.e >> (6 * i)));
+		e.col = (0xf & (e.e >> (1 + 6 * (7 - i))));
+		e.row = ((1 & (e.e >> (5 + 6 * (7 - i)))) << 1) | (1 & (e.e >> (6 * (7 - i))));
+		// printf("%u, %u\n", (1 & (e.e >> (5 + 6 * i))), (1 & (e.e >> (6 * (7 - i)))));
 		e.sbx |= (0xf & g_des_sbox[i][e.row][e.col]) << (4 * (7 - i));
+		// printf("col: %x, row: %x, out: %x\n", e.col, e.row, 0xf & (e.sbx >> (4 * (7 - i))));
 	}
+	// if (e.sbx != 0b01011100100000101011010110010111)
+	// 	printf("%#.8x\t%#.8x\n", e.sbx, 0b01011100100000101011010110010111);
+	// else
+	// 	printf("good\n");
 	out = 0;
 	i = -1;
 	while (++i < 32)
 		out |= ((1 & e.sbx >> g_p_out[i])) << (31 - i);
+	// if (out != 0b00100011010010101010100110111011)
+		// printf("fuck\n");
 	return (out);
 }
 
-void	des_encrypt(t_ssl *ssl)
+void	des_encrypt(t_ssl *ssl, char *out)
 {
 	uint32_t	l[17];
 	uint32_t	r[17];
@@ -167,72 +191,81 @@ void	des_encrypt(t_ssl *ssl)
 	{
 		l[i] = r[i - 1];
 		r[i] = (l[i - 1]) ^ (des_feistel(r[i - 1], &(ssl->key[i])));
-		if (i == 1 && r[1] != 0b11101111010010100110010101000100)
-			printf("feistel bad: %#.8x\t%#.8x\n", r[1], 0b11101111010010100110010101000100);
+		// if (i == 1 && r[1] != 0b11101111010010100110010101000100)
+		// 	printf("feistel bad: %#.8x\t%#.8x\n", r[1], 0b11101111010010100110010101000100);
 	}
 	rl16 = ((uint64_t)r[16] << 32) | l[16];
+	// if (rl16 != 0b0000101001001100110110011001010101000011010000100011001000110100)
+	// 	printf("wowee zowee\n");
 	i = -1;
+	ssl->chain = 0;
 	while (++i < 64)
 		ssl->chain |= ((1 & (rl16 >> g_fp[i])) << (63 - i));
-	if (ssl->chain != 0x85e813540f0ab405)
+	// if (ssl->chain != 0x85e813540f0ab405)
+	// {
+	// 	printf("Bad Shit: %#.16llx\t%#.16llx\n", ssl->chain, 0x85e813540f0ab405);
+	// 	exit(-1);
+	// }
+	i = -1;
+	while (++i < 8)
 	{
-		printf("Bad Shit\n");
-		exit(-1);
+		out[i] = 0xff & (ssl->chain >> (8 * (7 - i)));
+		printf("%.2hhx ", out[i]);
 	}
-// 	i = -1;
-// 	while (++i < 8)
-// 		out[i] = 0xff & (ssl->chain >> (8 * (7 - i)));
+	printf("\n");
+	printf("%064s\n", ft_umaxtoa_base(ssl->chain, 2));
 }
 
-int		main()
-{
-	t_ssl	ssl;
-
-	ssl.fdin = 0;
-	ssl.fdout = 1;
-	ssl.cbc = 0;
-	ssl.m = 0x0123456789abcdef;
-	ssl.pass = 0x133457799bbcdff1;
-	permuted_choice(&ssl);
-	des_encrypt(&ssl);
-
-}
-
-// void	des_encrypt_in(t_ssl *ssl)
-// {
-// 	size_t i;
-// 	char *out;
-
-// 	i = 0;
-// 	out = ft_strnew(ssl->len);
-// 	ssl->cbc = 0; // put this in init later
-// 	while (i < ssl->len)
-// 	{
-// 		des_message(ssl, i);
-// 		des_encrypt(ssl, out + i);
-// 		i += 8;
-// 	}
-// 	write(ssl->fdout, out, ssl->len);
-// 	ft_strdel(&(ssl->in));
-// 	ft_strdel(&out);
-// }
-
-// int		main(int ac, char **av)
+// int		main()
 // {
 // 	t_ssl	ssl;
 
-// 	ssl.in = NULL;
 // 	ssl.fdin = 0;
 // 	ssl.fdout = 1;
-// 	if ((ssl.len = read_func_des(&ssl)) == -1)
-// 		return (-1);
-// 	ssl.pass = key_interpret(av[1]);
+// 	ssl.cbc = 0;
+// 	ssl.m = 0x0123456789abcdef;
+// 	ssl.pass = 0x133457799bbcdff1;
 // 	permuted_choice(&ssl);
-// 	if (ssl.decrypt)
-// 		return (0); // decrypt function here
-// 	else
-// 		des_encrypt_in(&ssl);
+// 	des_encrypt(&ssl);
+
 // }
+
+void	des_encrypt_in(t_ssl *ssl)
+{
+	size_t i;
+	char *out;
+
+	i = 0;
+	out = ft_strnew(ssl->len);
+	ssl->cbc = 0; // put this in init later
+	while (i < ssl->len)
+	{
+		des_message(ssl, i);
+		des_encrypt(ssl, out + i);
+		// printf("%.16llx", ssl->chain);
+		i += 8;
+	}
+	// write(ssl->fdout, out, ssl->len);
+	ft_strdel(&(ssl->in));
+	ft_strdel(&out);
+}
+
+int		main(int ac, char **av)
+{
+	t_ssl	ssl;
+
+	ssl.in = NULL;
+	ssl.fdin = 0; // open(av[2], O_RDONLY);
+	ssl.fdout = 1; // ac > 2 ? open(av[2], O_WRONLY | O_APPEND) : 1;
+	if ((ssl.len = read_func_des(&ssl)) == -1)
+		return (-1);
+	ssl.pass = key_interpret(av[1]);
+	permuted_choice(&ssl);
+	if (ssl.decrypt)
+		return (0); // decrypt function here
+	else
+		des_encrypt_in(&ssl);
+}
 
 	// srand(0);
 	// for (int i = -1; i < 16; ++i)

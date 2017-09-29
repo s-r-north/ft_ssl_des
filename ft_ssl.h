@@ -7,10 +7,10 @@
 
 typedef struct			s_exp
 {
-	uint64_t			e : 48;
 	uint32_t			row;
 	uint32_t			col;
 	uint32_t			sbx;
+	uint64_t			e : 48;
 }						t_exp;
 
 typedef struct			s_key

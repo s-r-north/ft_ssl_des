@@ -6,7 +6,7 @@
 /*   By: snorth <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2017/02/27 14:59:27 by snorth            #+#    #+#             */
-/*   Updated: 2017/06/20 19:43:20 by snorth           ###   ########.fr       */
+/*   Updated: 2017/09/27 12:20:35 by snorth           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,6 +83,8 @@ double				ft_power(double nb, int pow);
 double				ft_root(double nb, int root);
 double				ft_fmod(double nb, double div);
 void				*ft_realloc(void *ptr, size_t size);
+char				*ft_umaxtoa_base(uintmax_t n, size_t base);
+char				*ft_imaxtoa(intmax_t n);
 
 # define BUFF_SIZE 32
 # define MAX_FD 4096

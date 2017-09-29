@@ -6,7 +6,7 @@
 #    By: snorth <marvin@42.fr>                      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2017/03/01 15:55:43 by snorth            #+#    #+#              #
-#    Updated: 2017/03/13 21:24:10 by snorth           ###   ########.fr        #
+#    Updated: 2017/09/27 12:22:08 by snorth           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -37,7 +37,8 @@ CFILES =	ft_memset.c		ft_bzero.c		ft_memcpy.c		\
 			ft_itoa_base.c	ft_power.c		ft_count_words.c\
 			ft_lstnew.c		ft_lstdelone.c	ft_lstdel.c		\
 			ft_lstadd.c		ft_lstiter.c	ft_lstmap.c		\
-			ft_fmod.c		ft_realloc.c	get_next_line.c
+			ft_fmod.c		ft_realloc.c	get_next_line.c	\
+			ft_imaxtoa.c
 
 OFILES =	$(CFILES:.c=.o)
 
